@@ -361,7 +361,12 @@ function DuckGame() {
 					const duck1EatList = [...res?.self?.foodEatenList];
 
 					const isEatFood = containsDot(duck1EatList, foodEatenxy);
-					if (foodEaten && !updatedFoods[foodIndex].eat2 && isEatFood) {
+					if (
+						foodEaten &&
+						!updatedFoods[foodIndex].eat2 &&
+						isEatFood &&
+						!updatedFoods[foodIndex].eat1
+					) {
 						updatedFoods[foodIndex].eat1 = true;
 						updatedFoods[foodIndex].eatNums1 = duckNum;
 						duckNum++;
@@ -401,28 +406,39 @@ function DuckGame() {
 					path2.push(newPosition);
 					setDuckPath2([...path2]);
 
+					// 鸭子坐标
 					const duckX = newPosition?.[0];
 					const duckY = newPosition?.[1];
 					const updatedFoods = [...foods];
+					// 找出鸭子走的坐标和食物坐标重叠的点
 					const foodEaten = updatedFoods.find(
 						(food) => food[0] === duckX && food[1] === duckY,
 					);
+					// 找出鸭子和走的坐标的点的索引
 					const foodIndex = updatedFoods.findIndex(
 						(food) => food[0] === duckX && food[1] === duckY,
 					);
 
+					// 重叠点的x y坐标
 					const foodEatenxy = [foodEaten?.[0], foodEaten?.[1]];
 
-					const duck1EatList = [...res?.opp?.foodEatenList];
-
-					const isEatFood = containsDot(duck1EatList, foodEatenxy);
-
-					if (foodEaten && !updatedFoods[foodIndex].eat1 && isEatFood) {
+					const duck2EatList = [...res?.opp?.foodEatenList];
+					// 判断 吃的食物是否包含重叠点
+					const isEatFood = containsDot(duck2EatList, foodEatenxy);
+					// 如果是重叠点  并且没有被鸭子1标记  并且  是我应该吃的食物坐标 则进行自增标记
+					if (
+						foodEaten &&
+						!updatedFoods[foodIndex].eat1 &&
+						isEatFood &&
+						!updatedFoods[foodIndex].eat2
+					) {
 						updatedFoods[foodIndex].eat2 = true;
 						updatedFoods[foodIndex].eatNums2 = duckNum2;
 						duckNum2++;
 						setFoods(updatedFoods);
 					}
+					// todo  满足重叠点 并且也是我要吃的食物点 但是我不是先吃   而是后吃的那个
+					// todo  这样其实我是先打了标记  但是被后面吃的盖掉了
 
 					index2++;
 					requestAnimationFrame(move);
@@ -441,6 +457,16 @@ function DuckGame() {
 	const viewBox = '0 0 384 384';
 	return (
 		<Layout isGray={true}>
+			{/* CSS图片预加载 */}
+			<div id="preload" style={{ display: 'none' }}>
+				<img src="/duck/click.png" alt="" />
+				<img src="/duck/tipBg.png" alt="" />
+				<img src="/duck/tipBtn.png" alt="" />
+				<img src="/duck/win.png" alt="" />
+				<img src="/duck/lose.png" alt="" />
+				<img src="/duck/konwBtn.png" alt="" />
+				<img src="/duck/rePlayBtn.png" alt="" />
+			</div>
 			<GlobalModal isOpen={isOpenTip}>
 				<div className={styles.tipImg}>
 					<div
