@@ -1,0 +1,593 @@
+/* index.less */
+
+.bg {
+  width: 100%;
+  height: 100%;
+  /* 如果背景图片加载失败，将显示这个背景色 */
+  background-image: url('/duck/game_bg.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  /* 禁止背景图像重复 */
+}
+
+.game_div {
+  width: 802px;
+  height: auto;
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  padding: 15px 22px 9px 27px;
+  margin: 16px auto;
+  display: flex;
+}
+
+
+
+
+.game_container {
+  width: 384px;
+  height: 384px;
+  position: relative;
+  /* 使用像素化效果 */
+  filter: pixelate(10px);
+  margin: 58px auto;
+  // border: 1px solid #fff6e7;
+}
+
+.water_div {
+  width: 475px;
+  height: 572px;
+  /* 如果背景图片加载失败，将显示这个背景色 */
+  background-image: url('/duck/water.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.unLogin {
+  width: 475px;
+  height: 572px;
+  /* 如果背景图片加载失败，将显示这个背景色 */
+  background-image: url('/duck/unLogin_water.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.unLogin_bg {
+  width: 464px;
+  height: 564px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 264px;
+    height: 69px;
+    cursor: pointer;
+  }
+}
+
+
+
+@keyframes zoomIn {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.3);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.bread {
+  animation: zoomIn 2s infinite,
+}
+
+
+
+.startBtn {
+  width: 334px;
+  height: 79px;
+  /* 如果背景图片加载失败，将显示这个背景色 */
+  background-image: url('/duck/begin_btn.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  position: absolute;
+  /* 将按钮设置为绝对定位，相对于父容器进行定位 */
+  bottom: 3px;
+  /* 按钮距离父容器底部的距离为 0 */
+  left: 50%;
+  /* 将按钮的左边缘设置为父容器的水平中心位置 */
+  transform: translateX(-50%);
+  /* 通过平移使按钮水平居中 */
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  /* 添加过渡效果，使按钮变换时平滑过渡 */
+}
+
+.startBtn:hover {
+  transform: translateX(-50%) translateY(-5px);
+  /* 向上移动 5px */
+}
+
+.rePlayBtn {
+  width: 334px;
+  height: 79px;
+  /* 如果背景图片加载失败，将显示这个背景色 */
+  background-image: url('/duck/rePlay.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  position: absolute;
+  /* 将按钮设置为绝对定位，相对于父容器进行定位 */
+  bottom: 3px;
+  /* 按钮距离父容器底部的距离为 0 */
+  left: 50%;
+  /* 将按钮的左边缘设置为父容器的水平中心位置 */
+  transform: translateX(-50%);
+  /* 通过平移使按钮水平居中 */
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  /* 添加过渡效果，使按钮变换时平滑过渡 */
+}
+
+.rePlayBtn:hover {
+  transform: translateX(-50%) translateY(-5px);
+  /* 向上移动 5px */
+}
+
+
+
+
+.playing {
+  font-size: 32px;
+  font-family: YouSheBiaoTiHei, YouSheBiaoTiHei-Regular;
+  font-weight: Regular;
+  text-align: center;
+  color: #ffffff;
+  line-height: 49px;
+  letter-spacing: 4px;
+  text-shadow: 0px 2px 5px 0px rgba(0, 0, 0, 0.66);
+  position: absolute;
+  /* 将按钮设置为绝对定位，相对于父容器进行定位 */
+  bottom: 18px;
+  /* 按钮距离父容器底部的距离为 0 */
+  left: 50%;
+  /* 将按钮的左边缘设置为父容器的水平中心位置 */
+  transform: translateX(-50%);
+  font-weight: bold;
+
+  @keyframes moveLeftRight {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    25% {
+      transform: translateX(-5px);
+      /* 向左移动 5px */
+    }
+
+    75% {
+      transform: translateX(5px);
+      /* 向右移动 5px */
+    }
+  }
+
+  .dot {
+    /* 或者 display: inline; */
+    margin-left: 10px;
+    animation: moveLeftRight 2s linear infinite;
+    /* 应用动画 */
+  }
+}
+
+.object {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+
+  img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .text {
+    font-size: 14px;
+    font-family: PingFang SC, PingFang SC-Regular;
+    font-weight: Regular;
+    text-align: left;
+    color: #333333;
+    line-height: 20px;
+  }
+
+  .outLine {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .line {
+    width: 16px;
+    height: 3px;
+    background: #e67187;
+    box-shadow: 0px 1px 1px 0px rgba(0, 0, 0, 0.16);
+  }
+
+  .line2 {
+    width: 16px;
+    height: 3px;
+    background: #fefdc7;
+    box-shadow: 0px 1px 1px 0px rgba(0, 0, 0, 0.16);
+  }
+}
+
+.ruleText {
+  font-size: 16px;
+  font-family: PingFang SC, PingFang SC-Semibold;
+  font-weight: bold;
+  text-align: left;
+  color: #333333;
+  line-height: 22px;
+  margin-top: 65px;
+}
+
+
+.rule1 {
+  font-size: 14px;
+  font-family: PingFang SC, PingFang SC-Regular;
+  font-weight: Regular;
+  text-align: left;
+  color: #333333;
+  line-height: 21px;
+  margin-top: 12px;
+}
+
+.food {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  z-index: 999;
+}
+
+.startDot {
+  position: absolute;
+  z-index: 1000;
+}
+
+.eat1Circle {
+  width: 20px;
+  height: 20px;
+  background: #e67187;
+  border: 1px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0px -1px 2px 0px rgba(0, 0, 0, 0.50);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  font-size: 12px;
+  font-family: PingFang SC, PingFang SC-Regular;
+  font-weight: Regular;
+  text-align: center;
+  color: #ffffff;
+  line-height: 17px;
+}
+
+.eat2Circle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  font-family: PingFang SC, PingFang SC-Regular;
+  font-weight: Regular;
+  text-align: center;
+  color: #3b71e8;
+  line-height: 17px;
+  width: 20px;
+  height: 20px;
+  background: #fefdc7;
+  border: 1px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0px -1px 2px 0px rgba(0, 0, 0, 0.50);
+}
+
+.clicked {
+  width: 32px;
+  height: 32px;
+  /* 点击后的颜色 */
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  z-index: 100;
+
+  background-image: url('/duck/click.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  font-size: 18px;
+  font-family: PingFang SC, PingFang SC-Semibold;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.tipImg {
+  width: 360px;
+  height: 240px;
+  background-image: url('/duck/tipBg.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  position: relative;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0px 50px;
+}
+
+.tipBtn {
+  width: 250px;
+  height: 64px;
+  background-image: url('/duck/tipBtn.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  font-size: 22px;
+  font-family: Alibaba PuHuiTi, Alibaba PuHuiTi-Bold;
+  font-weight: Bold;
+  color: #ffffff;
+  letter-spacing: 0.01px;
+  text-shadow: 0px 1px 4px 0px rgba(0, 0, 0, 0.66);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  margin-top: 30px;
+  padding-bottom: 10px;
+  letter-spacing: 4px;
+}
+
+/* 添加过渡效果，使按钮变换时平滑过渡 */
+
+
+.tipBtn:hover {
+  transform: translateY(-5px);
+  /* 向上移动 5px */
+}
+
+
+.winImg {
+  width: 360px;
+  height: 357px;
+  background-image: url('/duck/win.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loseImg {
+  width: 360px;
+  height: 357px;
+  background-image: url('/duck/lose.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.resultText {
+  font-size: 20px;
+  font-family: PingFang SC, PingFang SC-Semibold;
+  font-weight: bold;
+  text-align: center;
+  color: #292929;
+  line-height: 27px;
+  margin-bottom: 8px;
+  letter-spacing: 4px;
+  margin-top: 138px;
+}
+
+.resultText2 {
+  font-size: 14px;
+  font-family: PingFang SC, PingFang SC-Regular;
+  font-weight: Regular;
+  text-align: center;
+  color: #333333;
+  line-height: 20px;
+  letter-spacing: 4px;
+  margin-bottom: 36px;
+}
+
+.knowBtn {
+  width: 146px;
+  height: 65px;
+  background-image: url('/duck/konwBtn.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  cursor: pointer;
+  /* 初始状态下不进行偏移 */
+  transform: translateY(0);
+  transition: transform 0.2s linear;
+  /* 使用线性过渡效果 */
+}
+
+.knowBtn:hover {
+  transform: translateY(-3px);
+  /* 鼠标悬停时向上移动 3 像素 */
+}
+
+.resultReplayBtn {
+  width: 146px;
+  height: 65px;
+  background-image: url('/duck/rePlayBtn.png');
+  /* 指定背景图像的 URL */
+  background-size: cover;
+  /* 将背景图像调整为覆盖整个元素 */
+  background-position: center;
+  /* 将背景图像在元素中居中 */
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transform: translateY(0);
+  transition: transform 0.2s linear;
+  /* 使用线性过渡效果 */
+}
+
+.resultReplayBtn:hover {
+  transform: translateY(-3px);
+  /* 鼠标悬停时向上移动 3 像素 */
+}
+
+.tipContent {}
+
+.eat1 {
+
+  /* 点击后的颜色 */
+  font-size: 21px;
+  color: red;
+  position: absolute;
+  z-index: 100;
+}
+
+@keyframes moveForward {
+  0% {
+    left: -25px;
+  }
+
+  50% {
+    left: -20px;
+  }
+
+  /* 或者你想要的移动距离 */
+  100% {
+    left: -25px;
+  }
+}
+
+
+
+.duck1 {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  font-size: 24px;
+  z-index: 99;
+  /* 应用动画 */
+  /* 将动画应用于鸭子 */
+  /* 这里的4s是动画的持续时间，linear是动画速度函数，infinite是指动画无限循环 */
+}
+
+.moving {
+  animation: moveForward 1s linear infinite;
+}
+
+
+.duck2 {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  font-size: 24px;
+  z-index: 99;
+  // animation: moveForward 4s linear infinite;
+  /* 应用动画 */
+  /* 将动画应用于鸭子 */
+  /* 这里的4s是动画的持续时间，linear是动画速度函数，infinite是指动画无限循环 */
+}
+
+
+/* 调整鸭子动画 */
+.eating {
+  // animation: eatAnimation 2s infinite alternate ease-in-out;
+  /* 增加动画持续时间，并使用 ease-in-out 缓动函数 */
+}
+
+@keyframes eatAnimation {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-3px);
+    /* 减少垂直位移量 */
+  }
+}
+
+/* 调整线条动画 */
+.duck-trail line {
+  stroke: blue;
+  transition: stroke-width 0.5s ease-in-out;
+  /* 添加 stroke-width 的渐变效果 */
+}
+
+.duck-trail2 {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 2;
+}
