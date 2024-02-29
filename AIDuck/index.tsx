@@ -173,14 +173,11 @@ function DuckGame() {
 				});
 				setResult(res);
 				setEatingFood(true);
-				// moveDuck(res);
-				// moveDuckOpp(res);
 				setIsHiddenLine(true); // 隐藏鼠标线
 				setLinePath([]); // 清空鼠标连接线
 				setGameOver(false);
 				setDuck2Over(false);
 				setDuck1Over(false);
-
 				// 使用 Promise.all() 来等待两个函数同时开始
 				await Promise.all([moveDuck(res), moveDuckOpp(res)]);
 			} catch (error) {
@@ -317,13 +314,20 @@ function DuckGame() {
 		return pathString;
 	}
 
+	const checkEatFood = (duck1EatList, foodEatenxy) => {
+		const result = containsDot(duck1EatList, foodEatenxy);
+		const indexFood = result.index;
+		const isEatFood = result?.found;
+		return { isEatFood, indexFood };
+	};
+
 	const containsDot = (array, dot) => {
 		for (let i = 0; i < array.length; i++) {
-			if (array[i][0] === dot[0] && array[i][1] === dot[1]) {
-				return true;
+			if (array[i]?.[0] === dot?.[0] && array[i]?.[1] === dot?.[1]) {
+				return { found: true, index: i };
 			}
 		}
-		return false;
+		return { found: false, index: -1 };
 	};
 
 	const moveDuck = (res) => {
@@ -359,13 +363,16 @@ function DuckGame() {
 					const foodEatenxy = [foodEaten?.[0], foodEaten?.[1]];
 
 					const duck1EatList = [...res?.self?.foodEatenList];
-
-					const isEatFood = containsDot(duck1EatList, foodEatenxy);
+					//  先经过但不是先吃  应该使用食物索引 是否等于我的标记数字duckNum++
+					//  比如 食物索引为 0  那它的标记就应该为1  如何食物索引为3  它就不应该标记为 1
+					const { isEatFood, indexFood } = checkEatFood(duck1EatList, foodEatenxy);
+					const isMarkIndex = indexFood + 1 === duckNum;
 					if (
 						foodEaten &&
 						!updatedFoods[foodIndex].eat2 &&
 						isEatFood &&
-						!updatedFoods[foodIndex].eat1
+						!updatedFoods[foodIndex].eat1 &&
+						isMarkIndex
 					) {
 						updatedFoods[foodIndex].eat1 = true;
 						updatedFoods[foodIndex].eatNums1 = duckNum;
@@ -424,22 +431,22 @@ function DuckGame() {
 
 					const duck2EatList = [...res?.opp?.foodEatenList];
 					// 判断 吃的食物是否包含重叠点
-					const isEatFood = containsDot(duck2EatList, foodEatenxy);
 					// 如果是重叠点  并且没有被鸭子1标记  并且  是我应该吃的食物坐标 则进行自增标记
+
+					const { isEatFood, indexFood } = checkEatFood(duck2EatList, foodEatenxy);
+					const isMarkIndex = indexFood + 1 === duckNum2;
 					if (
 						foodEaten &&
 						!updatedFoods[foodIndex].eat1 &&
 						isEatFood &&
-						!updatedFoods[foodIndex].eat2
+						!updatedFoods[foodIndex].eat2 &&
+						isMarkIndex
 					) {
 						updatedFoods[foodIndex].eat2 = true;
 						updatedFoods[foodIndex].eatNums2 = duckNum2;
 						duckNum2++;
 						setFoods(updatedFoods);
 					}
-					// todo  满足重叠点 并且也是我要吃的食物点 但是我不是先吃   而是后吃的那个
-					// todo  这样其实我是先打了标记  但是被后面吃的盖掉了
-
 					index2++;
 					requestAnimationFrame(move);
 				} else {
