@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less'; // 导入样式文件
 import { Layout } from '@/components/Layouts';
-import { getDuckInitialValue, setFoodsStrategy } from '@/services/common';
+import {
+	getDuckGameInfo,
+	getDuckGameRanking,
+	getDuckInitialValue,
+	setDuckGameUserInfo,
+	setFoodsStrategy,
+} from '@/services/common';
 import bread from '@/assets/icons/bread.png';
 import duck2 from '@/assets/icons/duck2.png';
 import duck_no from '@/assets/icons/duck_no.png';
@@ -9,7 +15,7 @@ import duck1 from '@/assets/icons/duck1.png';
 import myPng from '@/assets/icons/my.png';
 import oppPng from '@/assets/icons/opp.png';
 import GlobalModal from '@/components/GlobalModal';
-import { Spin, message } from 'antd';
+import { Input, Spin, message } from 'antd';
 import { useAuth } from '@/hooks';
 
 let num = 0;
@@ -17,11 +23,11 @@ let duckNum = 1;
 let duckNum2 = 1;
 
 /* 
-  后端随机返回7个坐标点  前端进行循环出坐标点食物 
-  我方点出顺序坐标 发送给后端 
-  点击开始游戏  走后端给出的坐标点 
-  需要两个按钮  重新开始按钮  开始游戏按钮  
-  结果输赢显示  eg：我方赢  
+	后端随机返回7个坐标点  前端进行循环出坐标点食物 
+	我方点出顺序坐标 发送给后端 
+	点击开始游戏  走后端给出的坐标点 
+	需要两个按钮  重新开始按钮  开始游戏按钮  
+	结果输赢显示  eg：我方赢  
 */
 
 function DuckGame() {
@@ -30,7 +36,7 @@ function DuckGame() {
 	const duck1Y = -60;
 
 	const duck2X = 360;
-	const duck2Y = 316;
+	const duck2Y = 264;
 
 	const [foods, setFoods] = useState([]);
 	const [duckPosition1, setDuckPosition1] = useState({ x: duck1X, y: duck1Y });
@@ -61,14 +67,57 @@ function DuckGame() {
 	const [duck2Over, setDuck2Over] = useState(false);
 	const [resultShow, setResultShow] = useState(false);
 
+	const [newHand, setNewHand] = useState(false);
+	const [AIModel, setAIModel] = useState(false);
+	const [lockTip, setlockTip] = useState(false);
+
 	//  连线逻辑
 	const [pathCoordinatesLine, setLinePath] = useState([]);
+	const [rankList, setRankList] = useState();
+	const [showRank, setShowRank] = useState(false);
 
 	const [loading, setLoading] = useState(false);
+	const [gameInfo, setGameInfo] = useState(null);
+	const [infoLoading, setInfoLoading] = useState(false);
+	const [userName, setName] = useState('');
+	const [nameTip, setNameTip] = useState(null);
+	// 鸭子正在移动
+	const [moving, setMove] = useState(false);
 
+	useEffect(() => {
+		// 获取游戏用户信息
+		getDuckGameInfoHandle(true);
+	}, []);
+
+	// 进入游戏的时候
+	const getDuckGameInfoHandle = async (needLoading = false, isNewHand = true) => {
+		try {
+			setInfoLoading(needLoading);
+			const res = await getDuckGameInfo({
+				mode: isNewHand ? '' : 'AI',
+			});
+			setGameInfo(res);
+		} catch (error) {
+		} finally {
+			setInfoLoading(false);
+		}
+	};
+
+	// 返回首页事件
+	const backHome = () => {
+		setNewHand(false);
+		setAIModel(false);
+		if (!gameInfo?.unlockAI) {
+			getDuckGameInfoHandle(false, newHand);
+		}
+	};
+
+	// 游戏结束
 	useEffect(() => {
 		if (duck2Over && duck1Over) {
 			setGameOver(true);
+			getDuckGameInfoHandle(false, newHand);
+			setMove(false);
 			setTimeout(() => {
 				setResultShow(true);
 			}, 100);
@@ -114,7 +163,7 @@ function DuckGame() {
 			}
 			window.removeEventListener('mousemove', handleMouseMove);
 		};
-	}, [parentRef, parentRef.current]);
+	}, [parentRef, parentRef.current, showRank]);
 
 	// 点击下一个食物时，更新起点坐标为该食物的坐标
 	const handleClickNextFood = (foodX, foodY) => {
@@ -124,7 +173,6 @@ function DuckGame() {
 
 	useEffect(() => {
 		getDuckInit();
-
 		return () => {
 			num = null;
 			duckNum = null;
@@ -170,9 +218,11 @@ function DuckGame() {
 				const res = await setFoodsStrategy({
 					id: duckInit?.id,
 					strategy: strategyList,
+					mode: AIModel ? 'AI' : '',
 				});
 				setResult(res);
 				setEatingFood(true);
+				setMove(true);
 				setIsHiddenLine(true); // 隐藏鼠标线
 				setLinePath([]); // 清空鼠标连接线
 				setGameOver(false);
@@ -461,19 +511,211 @@ function DuckGame() {
 		});
 	};
 
-	const viewBox = '0 0 384 384';
+	const viewBox = '0 0 384 350';
+
+	const handleAIModelClick = () => {
+		if (!gameInfo?.unlockAI) {
+			setlockTip(true);
+			return;
+		}
+		reStart();
+		setAIModel(true);
+		getDuckGameInfoHandle(false, false);
+	};
+
+	const handleRankList = async () => {
+		try {
+			const res = await getDuckGameRanking({
+				mode: AIModel ? 'AI' : '',
+			});
+			setRankList(res);
+		} catch (error) {}
+	};
+
+	useEffect(() => {
+		// 在初次进入游戏调用排行榜
+		if (AIModel || newHand) {
+			handleRankList();
+		}
+	}, [AIModel, newHand]);
+
+	// 排行榜
+	const RankList = () => {
+		const rankImg = ['', '/duck/no_1.png', '/duck/no_2.png', '/duck/no_3.png'];
+		const myData = rankList?.filter((item) => item.isSelf === true)?.[0];
+		return (
+			<div
+				className={styles.rank_bg}
+				style={{
+					backgroundImage: newHand
+						? 'url("/duck/newHand_rank_bg.png")'
+						: 'url("/duck/ai_bg.png")',
+				}}
+			>
+				<div
+					onClick={() => {
+						// reStart();
+						setShowRank(false);
+					}}
+					className={styles.backImg}
+				>
+					<img src="/duck/back.png" />
+				</div>
+				<div
+					style={{
+						marginRight: 6,
+						display: 'flex',
+						flexDirection: 'column',
+						height: '100%',
+						paddingBottom: 46,
+					}}
+				>
+					<div className={styles.list_bg}>
+						<div className={styles.rankWidth}>排名</div>
+						<div className={styles.rankWidth}>玩家</div>
+						<div className={styles.rankWidth}>胜率</div>
+						<div className={styles.rankWidth}>积分</div>
+					</div>
+					<div className={styles.rankList_bg}>
+						{rankList?.slice(0, 10)?.map((item, index) => {
+							return (
+								<div key={index}>
+									<div className={styles.list} style={{ margin: 0 }} key={index}>
+										<div className={styles.rank}>
+											{item?.ranking > 3 ? (
+												<span>{item?.ranking}</span>
+											) : (
+												<img src={rankImg[item.ranking]} />
+											)}
+										</div>
+										<div className={styles.text}>{item.username}</div>
+										<div className={styles.text}>{item.winRate}</div>
+										<div className={styles.text}> {item.points}</div>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+					{/* 我的排名 */}
+					{rankList?.length > 0 && (
+						<div>
+							<div
+								className={`${styles.myBg} ${styles.list} `}
+								style={{ marginRight: 15 }}
+							>
+								<img
+									style={{
+										width: 38,
+										height: 38,
+										position: 'absolute',
+										left: 0,
+										top: 0,
+									}}
+									src="/duck/my.png"
+								/>
+								<div className={styles.rank}>
+									<span style={{ fontSize: 22 }}>{myData?.ranking}</span>
+								</div>
+								<div className={styles.text}>{myData?.username}</div>
+								<div className={styles.text}>{myData?.winRate}</div>
+								<div className={styles.text}> {myData?.points}</div>
+							</div>
+							<div className={styles.excess} style={{ marginRight: 15 }}>
+								您的积分超过了{myData?.excess}的玩家！
+							</div>
+						</div>
+					)}
+				</div>
+			</div>
+		);
+	};
+
+	// 创建用户
+	const createName = async () => {
+		if (!userName) {
+			setNameTip('请输入账号名！');
+			return;
+		} else {
+			const res = await setDuckGameUserInfo({
+				username: userName,
+			});
+			if (!res?.status) {
+				setNameTip('该玩家昵称已被使用！');
+				return;
+			}
+			message.success({
+				content: '账号创建成功！',
+				style: {
+					marginTop: '25vh',
+					marginRight: '40vh',
+				},
+				duration: 1,
+			});
+			getDuckGameInfoHandle(false, true);
+		}
+	};
+
+	const aiModelImageSrc = !gameInfo?.unlockAI ? '/duck/lockAI.png' : '/duck/unlockAi.png';
+
+	const preloadImages = [
+		'/duck/click.png',
+		'/duck/tipBg.png',
+		'/duck/tipBtn.png',
+		'/duck/win.png',
+		'/duck/lose.png',
+		'/duck/konwBtn.png',
+		'/duck/rePlayBtn.png',
+		'/duck/newHand_rank_bg.png',
+		'/duck/ai_bg.png',
+	];
+
+	// 图片预加载
+	useEffect(() => {
+		setTimeout(() => {
+			preloadImages.forEach((src, index) => {
+				const img = new Image();
+				img.src = src;
+			});
+		}, 1000); // 延迟 1000 毫秒（1 秒）加载图片
+	}, []);
 	return (
 		<Layout isGray={true}>
-			{/* CSS图片预加载 */}
-			<div id="preload" style={{ display: 'none' }}>
-				<img src="/duck/click.png" alt="" />
-				<img src="/duck/tipBg.png" alt="" />
-				<img src="/duck/tipBtn.png" alt="" />
-				<img src="/duck/win.png" alt="" />
-				<img src="/duck/lose.png" alt="" />
-				<img src="/duck/konwBtn.png" alt="" />
-				<img src="/duck/rePlayBtn.png" alt="" />
-			</div>
+			<GlobalModal isOpen={lockTip}>
+				<div className={styles.tipImg} style={{ padding: '0px 30px' }}>
+					<div
+						className={styles.btnText}
+						style={{
+							fontSize: 18,
+							marginTop: 50,
+							textAlign: 'center',
+							fontWeight: 'normal',
+							lineHeight: '28px',
+						}}
+					>
+						<div>
+							您在“新手模式”已赢得
+							<span style={{ color: '#fc4649' }}>{gameInfo?.gamesPlayed || 0}</span>
+							局比赛，
+						</div>
+						<div>
+							再赢
+							<span style={{ color: '#fc4649', fontSize: 20, fontWeight: 'bold' }}>
+								{10 - gameInfo?.gamesPlayed || 0}
+							</span>
+							局比赛，即可解锁“AI模式”
+						</div>
+					</div>
+					<div
+						className={styles.tipBtn}
+						style={{ marginTop: 30 }}
+						onClick={() => {
+							setlockTip(false);
+						}}
+					>
+						我知道了
+					</div>
+				</div>
+			</GlobalModal>
 			<GlobalModal isOpen={isOpenTip}>
 				<div className={styles.tipImg}>
 					<div
@@ -502,27 +744,68 @@ function DuckGame() {
 
 			<GlobalModal isOpen={resultShow}>
 				{result?.self?.foodCounts > result?.opp?.foodCounts ? (
-					<div className={styles.winImg}>
-						<div className={styles.resultText}>恭喜你，获得比赛胜利！</div>
-						<div className={styles.resultText2}>
-							本局游戏获取食物
-							<span style={{ color: '#fb282c' }}>{result?.self?.foodCounts}</span>个
-						</div>
-						<div style={{ display: 'flex', gap: 6 }}>
-							<div
-								className={styles.knowBtn}
-								onClick={() => {
-									setResultShow(false);
-								}}
-							/>
-							<div
-								className={styles.resultReplayBtn}
-								onClick={() => {
-									setResultShow(false);
-									reStart();
-								}}
-							/>
-						</div>
+					<div>
+						<>
+							{/* 第一次解锁 */}
+							{result?.gameStatus?.isFirstTime ? (
+								<div className={styles.successImg}>
+									<div
+										className={styles.resultText}
+										style={{ letterSpacing: 0, marginTop: 190 }}
+									>
+										恭喜您，已获得10局比赛胜利
+									</div>
+									<div
+										className={styles.resultText}
+										style={{ letterSpacing: 0, marginTop: 0, marginBottom: 30 }}
+									>
+										成功解锁“AI模式”
+									</div>
+									<div style={{ display: 'flex', gap: 6 }}>
+										<div
+											className={styles.backNewHand}
+											onClick={() => {
+												setResultShow(false);
+											}}
+										/>
+										<div
+											className={styles.enterAI}
+											onClick={() => {
+												handleAIModelClick();
+												setNewHand(false);
+												setResultShow(false);
+											}}
+										/>
+									</div>
+								</div>
+							) : (
+								<div className={styles.winImg}>
+									<div className={styles.resultText}>恭喜您，获得比赛胜利！</div>
+									<div className={styles.resultText2}>
+										本局游戏获取食物
+										<span style={{ color: '#fb282c' }}>
+											{result?.self?.foodCounts}
+										</span>
+										个
+									</div>
+									<div style={{ display: 'flex', gap: 6 }}>
+										<div
+											className={styles.knowBtn}
+											onClick={() => {
+												setResultShow(false);
+											}}
+										/>
+										<div
+											className={styles.resultReplayBtn}
+											onClick={() => {
+												setResultShow(false);
+												reStart();
+											}}
+										/>
+									</div>
+								</div>
+							)}
+						</>
 					</div>
 				) : (
 					<div className={styles.loseImg}>
@@ -551,6 +834,8 @@ function DuckGame() {
 			</GlobalModal>
 			<div className={styles.bg}>
 				<div className={styles.game_div}>
+					{/* 游戏左侧界面
+					 */}
 					{!isLoginState ? (
 						<div className={styles.unLogin}>
 							<div className={styles.unLogin_bg}>
@@ -563,332 +848,745 @@ function DuckGame() {
 							</div>
 						</div>
 					) : (
-						<div className={styles.water_div}>
-							{!eatingFood ? (
-								<div className={styles.startBtn} onClick={startGame} />
-							) : gameOver ? (
-								<div className={styles.rePlayBtn} onClick={reStart} />
+						<>
+							{showRank ? (
+								<RankList />
 							) : (
-								<div
-									className={styles.playing}
-									style={{ display: 'flex', alignItems: 'center' }}
-								>
-									<div>比赛进行中</div>
-									<div style={{ paddingBottom: 15 }} className={styles.dot}>
-										...
-									</div>
-								</div>
-							)}
-							<Spin spinning={loading}>
-								<>
-									<div className={styles.game_container} ref={parentRef}>
-										{(eatingFood || gameOver) && (
-											<div>
-												<div
-													style={{ left: `-13px`, top: `-29px` }}
-													className={styles.startDot}
-												>
-													<img
-														style={{ width: 28, height: 34 }}
-														src="/duck/start_red.png"
-													/>
-												</div>
+								<Spin spinning={infoLoading}>
+									<div className={styles.water_div}>
+										{!infoLoading && (
+											<>
+												{/* 无用户名 */}
+												{!gameInfo?.username ? (
+													<div
+														style={{
+															width: '467px',
+															height: '100%',
+															paddingTop: 80,
+														}}
+													>
+														<div className={styles.create_bg}>
+															<div style={{ marginTop: 100 }}>
+																<Input
+																	onChange={(e) => {
+																		setName(e.target.value);
+																		setNameTip(null);
+																	}}
+																	placeholder="请输入玩家昵称"
+																	style={{
+																		width: 256,
+																		height: 40,
+																		border: '1px solid #FCBE5B',
+																		borderRadius: 4,
+																	}}
+																/>
+															</div>
+															{nameTip && (
+																<div className={styles.nameTip}>
+																	{nameTip}
+																</div>
+															)}
 
-												<div
-													style={{ left: `368px`, top: `353px` }}
-													className={styles.startDot}
-												>
-													<img
-														style={{ width: 28, height: 34 }}
-														src="/duck/start_blue.png"
-													/>
-												</div>
-											</div>
-										)}
-										{foods?.map((food, index) => (
-											<div
-												key={index}
-												className={`${styles.food}`}
-												onClick={() =>
-													handleFoodClick(index, food[0], food[1])
-												}
-												onDoubleClick={() =>
-													handleFoodDoubleClick(index, food[0], food[1])
-												}
-												// 将食物的位置都减去10
-												style={{
-													left: `${food[0] - 10}px`,
-													top: `${food[1] - 10}px`,
-													pointerEvents: gameOver ? 'none' : 'auto',
-												}}
-											>
-												{!gameOver && (
+															<div
+																onClick={createName}
+																className={styles.createBtn}
+															/>
+														</div>
+													</div>
+												) : (
 													<>
-														{eatingFood ? (
+														{!newHand && !AIModel ? (
 															<>
-																{food?.eat1 || food?.eat2 ? (
-																	<div>
-																		{food?.eat1 ? (
-																			<div
-																				className={
-																					styles.eat1Circle
-																				}
-																			>
-																				{food?.eatNums1}
-																			</div>
-																		) : (
-																			<div
-																				className={
-																					styles.eat2Circle
-																				}
-																			>
-																				{food?.eatNums2}
-																			</div>
-																		)}
-																	</div>
-																) : (
+																<div
+																	style={{
+																		display: 'flex',
+																		width: '100%',
+																		height: 'auto',
+																		justifyContent: 'center',
+																		flexDirection: 'column',
+																		alignItems: 'center',
+																		paddingTop: 60,
+																	}}
+																>
 																	<img
-																		src={bread}
+																		src="/duck/choose.png"
 																		style={{
-																			width: 22,
-																			height: 22,
+																			width: 127,
+																			height: 28,
+																			marginBottom: 38,
 																		}}
 																	/>
-																)}
+																	<div
+																		style={{
+																			display: 'flex',
+																			gap: 24,
+																		}}
+																	>
+																		{/* 新手模式 */}
+																		<img
+																			onClick={() => {
+																				reStart();
+																				setNewHand(true);
+																				getDuckGameInfoHandle(
+																					false,
+																					true,
+																				);
+																			}}
+																			className={
+																				styles.newImg
+																			}
+																			src="/duck/newHand.png"
+																		/>
+																		<img
+																			onClick={
+																				handleAIModelClick
+																			}
+																			className={
+																				styles.newImg
+																			}
+																			src={aiModelImageSrc}
+																		/>
+																	</div>
+																</div>
 															</>
 														) : (
-															<img
-																className={styles.bread}
-																src={bread}
-																style={{ width: 22, height: 22 }}
-															/>
+															<>
+																{!eatingFood ? (
+																	<div className={styles.footer}>
+																		{/* 返回首页 */}
+																		<img
+																			onClick={backHome}
+																			src="/duck/home.png"
+																		/>
+																		<div
+																			className={
+																				styles.startBtn
+																			}
+																			onClick={startGame}
+																		/>
+																	</div>
+																) : gameOver ? (
+																	<div className={styles.footer}>
+																		<img
+																			onClick={backHome}
+																			src="/duck/home.png"
+																		/>
+																		<div
+																			className={
+																				styles.rePlayBtn
+																			}
+																			onClick={reStart}
+																		/>
+																	</div>
+																) : (
+																	<div
+																		className={styles.playing}
+																		style={{
+																			display: 'flex',
+																			alignItems: 'center',
+																		}}
+																	>
+																		<div>比赛进行中</div>
+																		<div
+																			style={{
+																				paddingBottom: 15,
+																			}}
+																			className={styles.dot}
+																		>
+																			...
+																		</div>
+																	</div>
+																)}
+																<>
+																	<div
+																		className={
+																			styles[
+																				newHand
+																					? 'newHand_bg'
+																					: 'aiModel_bg'
+																			]
+																		}
+																	>
+																		<div
+																			className={
+																				styles.score_img
+																			}
+																		>
+																			<div
+																				style={{
+																					position:
+																						'relative',
+																				}}
+																			>
+																				<img src="/duck/score.png" />
+																				<div
+																					className={
+																						styles.score_text
+																					}
+																					style={{
+																						right: 15,
+																					}}
+																				>
+																					{gameInfo?.points ||
+																						0}
+																				</div>
+																			</div>
+
+																			<div
+																				style={{
+																					position:
+																						'relative',
+																				}}
+																			>
+																				<img src="/duck/rate.png" />
+																				<div
+																					className={
+																						styles.score_text
+																					}
+																				>
+																					{gameInfo?.winRate ||
+																						0}
+																				</div>
+																			</div>
+
+																			{/* 排行 */}
+																			<div
+																				style={{
+																					position:
+																						'relative',
+																					cursor: 'pointer',
+																					pointerEvents:
+																						moving
+																							? 'none'
+																							: 'unset',
+																				}}
+																				onClick={() => {
+																					setShowRank(
+																						true,
+																					);
+																					handleRankList();
+																				}}
+																			>
+																				<img
+																					style={{
+																						width: 99,
+																					}}
+																					src="/duck/rank.png"
+																				/>
+																				<div
+																					className={
+																						styles.score_text
+																					}
+																					style={{
+																						right: 35,
+																					}}
+																				>
+																					{gameInfo?.ranking ||
+																						0}
+																				</div>
+																			</div>
+																		</div>
+																	</div>
+																	<Spin spinning={loading}>
+																		<div
+																			className={
+																				styles.game_container
+																			}
+																			ref={parentRef}
+																		>
+																			{(eatingFood ||
+																				gameOver) && (
+																				<div>
+																					<div
+																						style={{
+																							left: `-13px`,
+																							top: `-29px`,
+																						}}
+																						className={
+																							styles.startDot
+																						}
+																					>
+																						<img
+																							style={{
+																								width: 28,
+																								height: 34,
+																							}}
+																							src="/duck/start_red.png"
+																						/>
+																					</div>
+
+																					<div
+																						style={{
+																							left: `368px`,
+																							top: `301px`,
+																						}}
+																						className={
+																							styles.startDot
+																						}
+																					>
+																						<img
+																							style={{
+																								width: 28,
+																								height: 34,
+																							}}
+																							src="/duck/start_blue.png"
+																						/>
+																					</div>
+																				</div>
+																			)}
+																			{foods?.map(
+																				(food, index) => (
+																					<div
+																						key={index}
+																						className={`${styles.food}`}
+																						onClick={() =>
+																							handleFoodClick(
+																								index,
+																								food[0],
+																								food[1],
+																							)
+																						}
+																						onDoubleClick={() =>
+																							handleFoodDoubleClick(
+																								index,
+																								food[0],
+																								food[1],
+																							)
+																						}
+																						// 将食物的位置都减去10
+																						style={{
+																							left: `${
+																								food[0] -
+																								10
+																							}px`,
+																							top: `${
+																								food[1] -
+																								10
+																							}px`,
+																							pointerEvents:
+																								gameOver
+																									? 'none'
+																									: 'auto',
+																						}}
+																					>
+																						{!gameOver && (
+																							<>
+																								{eatingFood ? (
+																									<>
+																										{food?.eat1 ||
+																										food?.eat2 ? (
+																											<div>
+																												{food?.eat1 ? (
+																													<div
+																														className={
+																															styles.eat1Circle
+																														}
+																													>
+																														{
+																															food?.eatNums1
+																														}
+																													</div>
+																												) : (
+																													<div
+																														className={
+																															styles.eat2Circle
+																														}
+																													>
+																														{
+																															food?.eatNums2
+																														}
+																													</div>
+																												)}
+																											</div>
+																										) : (
+																											<img
+																												src={
+																													bread
+																												}
+																												style={{
+																													width: 22,
+																													height: 22,
+																												}}
+																											/>
+																										)}
+																									</>
+																								) : (
+																									<img
+																										className={
+																											styles.bread
+																										}
+																										src={
+																											bread
+																										}
+																										style={{
+																											width: 22,
+																											height: 22,
+																										}}
+																									/>
+																								)}
+																							</>
+																						)}
+
+																						{gameOver && (
+																							<div>
+																								{food?.eat1 ? (
+																									<div
+																										className={
+																											styles.eat1Circle
+																										}
+																									>
+																										{
+																											food?.eatNums1
+																										}
+																									</div>
+																								) : (
+																									<div
+																										className={
+																											styles.eat2Circle
+																										}
+																									>
+																										{
+																											food?.eatNums2
+																										}
+																									</div>
+																								)}
+																							</div>
+																						)}
+
+																						{!gameOver &&
+																							!eatingFood && (
+																								<>
+																									{food.clicked ? (
+																										<div
+																											className={
+																												styles.clicked
+																											}
+																										>
+																											{
+																												food?.times
+																											}
+																										</div>
+																									) : null}
+																								</>
+																							)}
+																					</div>
+																				),
+																			)}
+																			{/* 我的鸭 */}
+																			<div
+																				className={`${
+																					styles.duck1
+																				} ${
+																					eatingFood
+																						? styles.eating
+																						: styles.moving
+																				}`}
+																				style={{
+																					left: eatingFood
+																						? `${
+																								duckPosition1.x -
+																								20
+																						  }px`
+																						: `${duckPosition1.x}px`,
+																					top: eatingFood
+																						? `${
+																								duckPosition1.y -
+																								60
+																						  }px`
+																						: `${duckPosition1.y}px`,
+																				}}
+																			>
+																				<img
+																					src={myPng}
+																					style={{
+																						width: 36,
+																						height: 22,
+																					}}
+																				/>
+																				<img
+																					id="duck1Img"
+																					src={duck1}
+																					style={{
+																						width: 37,
+																						height: 37,
+																					}}
+																				/>
+																			</div>
+																			{!gameOver ? (
+																				<svg
+																					viewBox={
+																						viewBox
+																					}
+																					className={
+																						styles[
+																							'duck-trail'
+																						]
+																					}
+																				>
+																					<path
+																						d={generateSmoothPath(
+																							duckPath,
+																						)}
+																						fill="none"
+																						stroke="#E67187"
+																						strokeWidth="2"
+																						strokeLinejoin="round" // 设置转折处为圆滑
+																						strokeLinecap="round" // 设置线段末端为圆形，使线段更柔和
+																					/>
+																				</svg>
+																			) : (
+																				<svg
+																					viewBox={
+																						viewBox
+																					}
+																					className={
+																						styles[
+																							'duck-trail'
+																						]
+																					}
+																				>
+																					<path
+																						d={generateSmoothPath(
+																							duckPath,
+																							10,
+																						)}
+																						fill="none"
+																						stroke="#E67187"
+																						strokeWidth="2"
+																						strokeLinejoin="round" // 设置转折处为圆滑
+																						strokeLinecap="round" // 设置线段末端为圆形，使线段更柔和
+																					/>
+																				</svg>
+																			)}
+
+																			{/* 机器鸭 */}
+																			<div
+																				className={`${
+																					styles.duck2
+																				} ${
+																					eatingFood
+																						? styles.eating
+																						: ''
+																				}`}
+																				style={{
+																					left: eatingFood
+																						? `${
+																								duckPosition2.x -
+																								10
+																						  }px`
+																						: `${duckPosition2.x}px`,
+																					top: eatingFood
+																						? `${
+																								duckPosition2.y -
+																								70
+																						  }px`
+																						: `${duckPosition2.y}px`,
+																				}}
+																			>
+																				<img
+																					src={oppPng}
+																					style={{
+																						width: 36,
+																						height: 22,
+																					}}
+																				/>
+																				<img
+																					src={duck2}
+																					style={{
+																						width: 37,
+																						height: 37,
+																					}}
+																				/>
+																			</div>
+
+																			{!gameOver ? (
+																				<svg
+																					viewBox={
+																						viewBox
+																					}
+																					className={
+																						styles[
+																							'duck-trail2'
+																						]
+																					}
+																				>
+																					<path
+																						d={generateSmoothPath(
+																							duckPath2,
+																						)}
+																						fill="none"
+																						stroke="#FEFBCE"
+																						strokeWidth="2"
+																						strokeDashoffset="0" // 定义虚线的起始偏移量
+																						strokeLinejoin="round" // 设置转折处为圆滑
+																						strokeLinecap="round" // 设置线条末端为圆形，使线条更柔和
+																					/>
+																				</svg>
+																			) : (
+																				<svg
+																					viewBox={
+																						viewBox
+																					}
+																					className={
+																						styles[
+																							'duck-trail2'
+																						]
+																					}
+																				>
+																					<path
+																						d={generateSmoothPath(
+																							duckPath2,
+																							10,
+																						)}
+																						fill="none"
+																						stroke="#FEFBCE"
+																						strokeWidth="2"
+																						strokeDashoffset="0" // 定义虚线的起始偏移量
+																						strokeLinejoin="round" // 设置转折处为圆滑
+																						strokeLinecap="round" // 设置线条末端为圆形，使线条更柔和
+																					/>
+																				</svg>
+																			)}
+																			{/* 连线食物 */}
+																			<svg
+																				viewBox={viewBox}
+																				className={
+																					styles[
+																						'duck-trail2'
+																					]
+																				}
+																				style={{
+																					zIndex: 1,
+																				}}
+																			>
+																				{pathCoordinatesLine.map(
+																					(
+																						coords,
+																						index,
+																					) => (
+																						<g
+																							key={
+																								index
+																							}
+																						>
+																							{index >
+																								0 && (
+																								<marker
+																									id={`arrowheadLine-${index}`}
+																									markerWidth="10"
+																									markerHeight="7"
+																									refX="26"
+																									refY="3.5"
+																									orient="auto"
+																									fill="#E67187"
+																								>
+																									<polygon points="0 0, 10 3.5, 0 7" />
+																								</marker>
+																							)}
+																							{index >
+																								0 && (
+																								<path
+																									d={`M${
+																										pathCoordinatesLine[
+																											index -
+																												1
+																										][0]
+																									},${
+																										pathCoordinatesLine[
+																											index -
+																												1
+																										][1]
+																									} L${
+																										coords[0]
+																									},${
+																										coords[1]
+																									}`}
+																									fill="none"
+																									stroke="#E67187"
+																									strokeWidth="1"
+																									markerEnd={`url(#arrowheadLine-${index})`}
+																								/>
+																							)}
+																						</g>
+																					),
+																				)}
+																			</svg>
+																			{/*跟随鼠标的线     */}
+																			{/* 选完之后  隐藏线条 */}
+																			{foods?.length > 0 && (
+																				<>
+																					{!isHiddenLine &&
+																						foods?.length !==
+																							strategyList?.length && (
+																							<svg
+																								viewBox={
+																									viewBox
+																								}
+																								className={
+																									styles[
+																										'duck-trail2'
+																									]
+																								}
+																								style={{
+																									zIndex: 1,
+																								}}
+																							>
+																								{/* 箭头线 */}
+																								<defs>
+																									<marker
+																										id="arrowhead"
+																										markerWidth="10"
+																										markerHeight="7"
+																										refX="10"
+																										refY="3.5"
+																										orient="auto"
+																										fill="#E67187"
+																									>
+																										<polygon points="0 0, 10 3.5, 0 7" />
+																									</marker>
+																								</defs>
+																								<line
+																									x1={
+																										startX
+																									}
+																									y1={
+																										startY
+																									}
+																									x2={
+																										endX ||
+																										startX
+																									} // 如果 endX 不存在，则使用 startX
+																									y2={
+																										endY ||
+																										startY
+																									} // 如果 endY 不存在，则使用 startY
+																									style={{
+																										stroke: '#E67187',
+																										strokeWidth: 1,
+																										markerEnd:
+																											'url(#arrowhead)',
+																									}}
+																								/>
+																							</svg>
+																						)}
+																				</>
+																			)}
+																		</div>
+																	</Spin>
+																</>
+															</>
 														)}
 													</>
 												)}
-
-												{gameOver && (
-													<div>
-														{food?.eat1 ? (
-															<div className={styles.eat1Circle}>
-																{food?.eatNums1}
-															</div>
-														) : (
-															<div className={styles.eat2Circle}>
-																{food?.eatNums2}
-															</div>
-														)}
-													</div>
-												)}
-
-												{!gameOver && !eatingFood && (
-													<>
-														{food.clicked ? (
-															<div className={styles.clicked}>
-																{food?.times}
-															</div>
-														) : null}
-													</>
-												)}
-											</div>
-										))}
-										{/* 我的鸭 */}
-										<div
-											className={`${styles.duck1} ${
-												eatingFood ? styles.eating : styles.moving
-											}`}
-											style={{
-												left: eatingFood
-													? `${duckPosition1.x - 20}px`
-													: `${duckPosition1.x}px`,
-												top: eatingFood
-													? `${duckPosition1.y - 60}px`
-													: `${duckPosition1.y}px`,
-											}}
-										>
-											<img
-												src={myPng}
-												style={{
-													width: 36,
-													height: 22,
-												}}
-											/>
-											<img
-												id="duck1Img"
-												src={duck1}
-												style={{
-													width: 37,
-													height: 37,
-												}}
-											/>
-										</div>
-										{!gameOver ? (
-											<svg viewBox={viewBox} className={styles['duck-trail']}>
-												<path
-													d={generateSmoothPath(duckPath)}
-													fill="none"
-													stroke="#E67187"
-													strokeWidth="2"
-													strokeLinejoin="round" // 设置转折处为圆滑
-													strokeLinecap="round" // 设置线段末端为圆形，使线段更柔和
-												/>
-											</svg>
-										) : (
-											<svg viewBox={viewBox} className={styles['duck-trail']}>
-												<path
-													d={generateSmoothPath(duckPath, 10)}
-													fill="none"
-													stroke="#E67187"
-													strokeWidth="2"
-													strokeLinejoin="round" // 设置转折处为圆滑
-													strokeLinecap="round" // 设置线段末端为圆形，使线段更柔和
-												/>
-											</svg>
-										)}
-
-										{/* 机器鸭 */}
-										<div
-											className={`${styles.duck2} ${
-												eatingFood ? styles.eating : ''
-											}`}
-											style={{
-												left: eatingFood
-													? `${duckPosition2.x - 10}px`
-													: `${duckPosition2.x}px`,
-												top: eatingFood
-													? `${duckPosition2.y - 70}px`
-													: `${duckPosition2.y}px`,
-											}}
-										>
-											<img
-												src={oppPng}
-												style={{
-													width: 36,
-													height: 22,
-												}}
-											/>
-											<img
-												src={duck2}
-												style={{
-													width: 37,
-													height: 37,
-												}}
-											/>
-										</div>
-
-										{!gameOver ? (
-											<svg
-												viewBox={viewBox}
-												className={styles['duck-trail2']}
-											>
-												<path
-													d={generateSmoothPath(duckPath2)}
-													fill="none"
-													stroke="#FEFBCE"
-													strokeWidth="2"
-													strokeDashoffset="0" // 定义虚线的起始偏移量
-													strokeLinejoin="round" // 设置转折处为圆滑
-													strokeLinecap="round" // 设置线条末端为圆形，使线条更柔和
-												/>
-											</svg>
-										) : (
-											<svg
-												viewBox={viewBox}
-												className={styles['duck-trail2']}
-											>
-												<path
-													d={generateSmoothPath(duckPath2, 10)}
-													fill="none"
-													stroke="#FEFBCE"
-													strokeWidth="2"
-													strokeDashoffset="0" // 定义虚线的起始偏移量
-													strokeLinejoin="round" // 设置转折处为圆滑
-													strokeLinecap="round" // 设置线条末端为圆形，使线条更柔和
-												/>
-											</svg>
-										)}
-										{/* 连线食物 */}
-										<svg
-											viewBox={viewBox}
-											className={styles['duck-trail2']}
-											style={{ zIndex: 1 }}
-										>
-											{pathCoordinatesLine.map((coords, index) => (
-												<g key={index}>
-													{index > 0 && (
-														<marker
-															id={`arrowheadLine-${index}`}
-															markerWidth="10"
-															markerHeight="7"
-															refX="26"
-															refY="3.5"
-															orient="auto"
-															fill="#E67187"
-														>
-															<polygon points="0 0, 10 3.5, 0 7" />
-														</marker>
-													)}
-													{index > 0 && (
-														<path
-															d={`M${
-																pathCoordinatesLine[index - 1][0]
-															},${
-																pathCoordinatesLine[index - 1][1]
-															} L${coords[0]},${coords[1]}`}
-															fill="none"
-															stroke="#E67187"
-															strokeWidth="1"
-															markerEnd={`url(#arrowheadLine-${index})`}
-														/>
-													)}
-												</g>
-											))}
-										</svg>
-										{/*跟随鼠标的线     */}
-										{/* 选完之后  隐藏线条 */}
-										{foods?.length > 0 && (
-											<>
-												{!isHiddenLine &&
-													foods?.length !== strategyList?.length && (
-														<svg
-															viewBox={viewBox}
-															className={styles['duck-trail2']}
-															style={{ zIndex: 1 }}
-														>
-															{/* 箭头线 */}
-															<defs>
-																<marker
-																	id="arrowhead"
-																	markerWidth="10"
-																	markerHeight="7"
-																	refX="10"
-																	refY="3.5"
-																	orient="auto"
-																	fill="#E67187"
-																>
-																	<polygon points="0 0, 10 3.5, 0 7" />
-																</marker>
-															</defs>
-															<line
-																x1={startX}
-																y1={startY}
-																x2={endX || startX} // 如果 endX 不存在，则使用 startX
-																y2={endY || startY} // 如果 endY 不存在，则使用 startY
-																style={{
-																	stroke: '#E67187',
-																	strokeWidth: 1,
-																	markerEnd: 'url(#arrowhead)',
-																}}
-															/>
-														</svg>
-													)}
 											</>
 										)}
 									</div>
-								</>
-							</Spin>
-						</div>
+								</Spin>
+							)}
+						</>
 					)}
 
+					{/* 右侧规则描述 */}
 					<div style={{ marginLeft: 24, flex: 1, marginTop: 8 }}>
 						<div className={styles.object}>
 							<div>
@@ -921,6 +1619,9 @@ function DuckGame() {
 						<div className={styles.rule1}>2、双击已选择的点，可以取消选择食物。</div>
 						<div className={styles.rule1}>
 							3、比赛中，双方鸭子会按预定的顺序争抢食物，所有食物被吃完，游戏结束，获得最多食物的鸭子胜出。
+						</div>
+						<div className={styles.rule1}>
+							4、在“新手模式”中获得10局比赛胜利，即可解锁“AI模式”。
 						</div>
 					</div>
 				</div>
