@@ -17,18 +17,11 @@ import oppPng from '@/assets/icons/opp.png';
 import GlobalModal from '@/components/GlobalModal';
 import { Input, Spin, message } from 'antd';
 import { useAuth } from '@/hooks';
+import Filter from 'bad-words';
 
 let num = 0;
 let duckNum = 1;
 let duckNum2 = 1;
-
-/* 
-	后端随机返回7个坐标点  前端进行循环出坐标点食物 
-	我方点出顺序坐标 发送给后端 
-	点击开始游戏  走后端给出的坐标点 
-	需要两个按钮  重新开始按钮  开始游戏按钮  
-	结果输赢显示  eg：我方赢  
-*/
 
 function DuckGame() {
 	const { isLoginState, actions } = useAuth();
@@ -74,6 +67,8 @@ function DuckGame() {
 	//  连线逻辑
 	const [pathCoordinatesLine, setLinePath] = useState([]);
 	const [rankList, setRankList] = useState();
+	const [rankListAI, setRankListAI] = useState();
+
 	const [showRank, setShowRank] = useState(false);
 
 	const [loading, setLoading] = useState(false);
@@ -83,11 +78,20 @@ function DuckGame() {
 	const [nameTip, setNameTip] = useState(null);
 	// 鸭子正在移动
 	const [moving, setMove] = useState(false);
+	// 排行榜
+	const [isHomeEnterRank, setIsHomeEnterRank] = useState(false);
+	const [switchModel, setSwitchModel] = useState('new');
 
 	useEffect(() => {
 		// 获取游戏用户信息
 		getDuckGameInfoHandle(true);
 	}, []);
+
+	useEffect(() => {
+		// 在初次进入游戏调用排行榜
+		// 游戏模式切换调用排行榜
+		handleRankList();
+	}, [AIModel, newHand]);
 
 	// 进入游戏的时候
 	const getDuckGameInfoHandle = async (needLoading = false, isNewHand = true) => {
@@ -112,11 +116,26 @@ function DuckGame() {
 		}
 	};
 
+	// 返回按钮
+	const handleBack = () => {
+		setShowRank(false);
+		// 首页进入返回
+		if (isHomeEnterRank) {
+			setIsHomeEnterRank(false);
+			backHome();
+		} else {
+			// 回到首页检查局数
+			getDuckGameInfoHandle(false, newHand);
+		}
+	};
+
 	// 游戏结束
 	useEffect(() => {
 		if (duck2Over && duck1Over) {
 			setGameOver(true);
 			getDuckGameInfoHandle(false, newHand);
+			// 游戏结束调用排行榜
+			handleRankList();
 			setMove(false);
 			setTimeout(() => {
 				setResultShow(true);
@@ -215,6 +234,7 @@ function DuckGame() {
 			try {
 				// 设置游戏进行中状态为 true
 				setIsGameInProgress(true);
+				setMove(true);
 				const res = await setFoodsStrategy({
 					id: duckInit?.id,
 					strategy: strategyList,
@@ -222,7 +242,6 @@ function DuckGame() {
 				});
 				setResult(res);
 				setEatingFood(true);
-				setMove(true);
 				setIsHiddenLine(true); // 隐藏鼠标线
 				setLinePath([]); // 清空鼠标连接线
 				setGameOver(false);
@@ -244,6 +263,7 @@ function DuckGame() {
 
 	// 重新开始游戏
 	const reStart = () => {
+		setMove(false);
 		setDuckPosition1({ x: duck1X, y: duck1Y });
 		setDuckPosition2({ x: duck2X, y: duck2Y });
 		setFoods([]);
@@ -513,63 +533,72 @@ function DuckGame() {
 
 	const viewBox = '0 0 384 350';
 
+	const handleNewHandModleClick = () => {
+		getDuckGameInfoHandle(false, true);
+		reStart();
+		setNewHand(true);
+		setSwitchModel('new');
+	};
+
 	const handleAIModelClick = () => {
 		if (!gameInfo?.unlockAI) {
 			setlockTip(true);
 			return;
 		}
+		getDuckGameInfoHandle(false, false);
 		reStart();
 		setAIModel(true);
-		getDuckGameInfoHandle(false, false);
+		setSwitchModel('AI');
 	};
 
 	const handleRankList = async () => {
 		try {
-			const res = await getDuckGameRanking({
-				mode: AIModel ? 'AI' : '',
-			});
+			const [res, resAI] = await Promise.all([
+				getDuckGameRanking({ mode: '' }),
+				getDuckGameRanking({ mode: 'AI' }),
+			]);
 			setRankList(res);
-		} catch (error) {}
-	};
-
-	useEffect(() => {
-		// 在初次进入游戏调用排行榜
-		if (AIModel || newHand) {
-			handleRankList();
+			setRankListAI(resAI);
+		} catch (error) {
+			// 错误处理
 		}
-	}, [AIModel, newHand]);
+	};
 
 	// 排行榜
 	const RankList = () => {
 		const rankImg = ['', '/duck/no_1.png', '/duck/no_2.png', '/duck/no_3.png'];
-		const myData = rankList?.filter((item) => item.isSelf === true)?.[0];
+		const getData = switchModel === 'AI' ? rankListAI : rankList;
+		const myData = getData?.filter((item) => item.isSelf === true)?.[0];
+		const haveMyRank = getData?.some((item) => item.isSelf === true);
 		return (
-			<div
-				className={styles.rank_bg}
-				style={{
-					backgroundImage: newHand
-						? 'url("/duck/newHand_rank_bg.png")'
-						: 'url("/duck/ai_bg.png")',
-				}}
-			>
-				<div
-					onClick={() => {
-						// reStart();
-						setShowRank(false);
-					}}
-					className={styles.backImg}
-				>
+			<div className={styles.rank_bg}>
+				<div onClick={handleBack} className={styles.backImg}>
 					<img src="/duck/back.png" />
 				</div>
-				<div
-					style={{
-						marginRight: 6,
-						display: 'flex',
-						flexDirection: 'column',
-						height: '100%',
-						paddingBottom: 46,
-					}}
-				>
+
+				<div className={styles.rankContainer}>
+					<div style={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+						<div
+							onClick={() => {
+								switchModel === 'new' ? '' : setSwitchModel('new');
+							}}
+							className={`${
+								styles[switchModel === 'new' ? 'newHandOut' : 'newHandSwitch']
+							} `}
+						>
+							新手模式
+						</div>
+						<div
+							onClick={() => {
+								switchModel === 'AI' ? '' : setSwitchModel('AI');
+							}}
+							className={`${
+								styles[switchModel === 'AI' ? 'newHandOut' : 'newHandSwitch']
+							} `}
+						>
+							AI 模式
+						</div>
+					</div>
 					<div className={styles.list_bg}>
 						<div className={styles.rankWidth}>排名</div>
 						<div className={styles.rankWidth}>玩家</div>
@@ -577,7 +606,7 @@ function DuckGame() {
 						<div className={styles.rankWidth}>积分</div>
 					</div>
 					<div className={styles.rankList_bg}>
-						{rankList?.slice(0, 10)?.map((item, index) => {
+						{getData?.slice(0, 10)?.map((item, index) => {
 							return (
 								<div key={index}>
 									<div className={styles.list} style={{ margin: 0 }} key={index}>
@@ -588,7 +617,9 @@ function DuckGame() {
 												<img src={rankImg[item.ranking]} />
 											)}
 										</div>
-										<div className={styles.text}>{item.username}</div>
+										<div className={styles.text} title={item.username}>
+											{item.username}
+										</div>
 										<div className={styles.text}>{item.winRate}</div>
 										<div className={styles.text}> {item.points}</div>
 									</div>
@@ -597,12 +628,9 @@ function DuckGame() {
 						})}
 					</div>
 					{/* 我的排名 */}
-					{rankList?.length > 0 && (
-						<div>
-							<div
-								className={`${styles.myBg} ${styles.list} `}
-								style={{ marginRight: 15 }}
-							>
+					{getData?.length > 0 && haveMyRank && (
+						<div style={{ marginBottom: -1 }}>
+							<div className={`${styles.myBg} ${styles.list} `}>
 								<img
 									style={{
 										width: 38,
@@ -616,11 +644,13 @@ function DuckGame() {
 								<div className={styles.rank}>
 									<span style={{ fontSize: 22 }}>{myData?.ranking}</span>
 								</div>
-								<div className={styles.text}>{myData?.username}</div>
+								<div className={styles.text} title={myData?.username}>
+									{myData?.username}
+								</div>
 								<div className={styles.text}>{myData?.winRate}</div>
 								<div className={styles.text}> {myData?.points}</div>
 							</div>
-							<div className={styles.excess} style={{ marginRight: 15 }}>
+							<div className={styles.excess}>
 								您的积分超过了{myData?.excess}的玩家！
 							</div>
 						</div>
@@ -632,26 +662,34 @@ function DuckGame() {
 
 	// 创建用户
 	const createName = async () => {
-		if (!userName) {
+		// 去除用户名首尾空格
+		const trimmedUserName = userName.trim();
+
+		if (!trimmedUserName) {
 			setNameTip('请输入账号名！');
 			return;
-		} else {
-			const res = await setDuckGameUserInfo({
-				username: userName,
-			});
+		}
+		const filter = new Filter();
+		// 检测文本中是否含有敏感词汇
+		if (filter.isProfane(trimmedUserName)) {
+			setNameTip('违规昵称！');
+			return;
+		}
+		try {
+			const res = await setDuckGameUserInfo({ username: trimmedUserName });
 			if (!res?.status) {
 				setNameTip('该玩家昵称已被使用！');
 				return;
 			}
 			message.success({
 				content: '账号创建成功！',
-				style: {
-					marginTop: '25vh',
-					marginRight: '40vh',
-				},
+				style: { marginTop: '25vh', marginRight: '40vh' },
 				duration: 1,
 			});
 			getDuckGameInfoHandle(false, true);
+			handleRankList();
+		} catch (error) {
+			setNameTip('创建账号时出错，请稍后重试！');
 		}
 	};
 
@@ -872,6 +910,7 @@ function DuckGame() {
 																		setName(e.target.value);
 																		setNameTip(null);
 																	}}
+																	maxLength={12}
 																	placeholder="请输入玩家昵称"
 																	style={{
 																		width: 256,
@@ -879,6 +918,7 @@ function DuckGame() {
 																		border: '1px solid #FCBE5B',
 																		borderRadius: 4,
 																	}}
+																	onPressEnter={createName}
 																/>
 															</div>
 															{nameTip && (
@@ -894,6 +934,7 @@ function DuckGame() {
 														</div>
 													</div>
 												) : (
+													// 游戏模式选择
 													<>
 														{!newHand && !AIModel ? (
 															<>
@@ -924,14 +965,9 @@ function DuckGame() {
 																	>
 																		{/* 新手模式 */}
 																		<img
-																			onClick={() => {
-																				reStart();
-																				setNewHand(true);
-																				getDuckGameInfoHandle(
-																					false,
-																					true,
-																				);
-																			}}
+																			onClick={
+																				handleNewHandModleClick
+																			}
 																			className={
 																				styles.newImg
 																			}
@@ -947,6 +983,17 @@ function DuckGame() {
 																			src={aiModelImageSrc}
 																		/>
 																	</div>
+																</div>
+																<div
+																	onClick={() => {
+																		setShowRank(true);
+																		setSwitchModel('new');
+																		setIsHomeEnterRank(true);
+																	}}
+																	className={styles.rankClick}
+																>
+																	<img src="/duck/rankClick.png" />
+																	<div>排行榜</div>
 																</div>
 															</>
 														) : (
@@ -1038,11 +1085,19 @@ function DuckGame() {
 																						'relative',
 																				}}
 																			>
-																				<img src="/duck/rate.png" />
+																				<img
+																					style={{
+																						width: 99,
+																					}}
+																					src="/duck/rate.png"
+																				/>
 																				<div
 																					className={
 																						styles.score_text
 																					}
+																					style={{
+																						left: 42,
+																					}}
 																				>
 																					{gameInfo?.winRate ||
 																						0}
@@ -1064,7 +1119,11 @@ function DuckGame() {
 																					setShowRank(
 																						true,
 																					);
-																					handleRankList();
+																					setSwitchModel(
+																						AIModel
+																							? 'AI'
+																							: 'new',
+																					);
 																				}}
 																			>
 																				<img
