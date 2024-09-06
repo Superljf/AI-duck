@@ -3,6 +3,12 @@
 - 目前是每10局胜利 训练一次AI鸭
 - 后续会加入自动训练策略模型  
 # 效果展示
+- 区分Web端和手机端
+- 手机端H5
+![效果图](/img/image.png)
+- Web端
+![效果图](/img/web.png)
+- UI规则
 ![效果图](/img/main.png)
 ![效果图](/img/path.png)
 ![效果图](/img/result.png)
@@ -11,20 +17,8 @@
 ### react   python
 
 # play url
-- [点击访问AI游戏](https://techlent.com.cn/cn/AIGame)
+- [点击访问AI游戏-Web端](https://techlent.com.cn/cn/AIContest)
+- [点击访问AI游戏-手机端](https://m.techlent.com/cn/AIContest)
 
 
-# 需求点
-- 后端返回鸭子坐标及相应的食物坐标
-- 点击开始游戏  前端传入我方鸭子夺食顺序  后端返回相应的轨迹路线
 
-# 前端需要实现点
-- 食物的布局
-- 选择食物牵引线
-- 选择食物连线
-- 鸭子移动动画
-- 移动同时生成鸭子移动轨迹
-
-# 待解决问题
-- 鸭子移动动画处理
-- 鸭子移动转向问题
